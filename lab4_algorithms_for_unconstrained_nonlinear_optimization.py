@@ -1,4 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
+import scipy.optimize
+import random
 from abc import ABCMeta, abstractmethod
 
 
@@ -154,3 +157,38 @@ class LevenbergMarquardtOptimizer(Optimizer):
             self.v *= 2
 
         return self.x, self.y
+
+    def lab22_plot(N, x_k, y_k):
+        res1_lin = scipy.optimize.brute(LSE_lin, ranges=(slice(0, 1, 1 / (N + 1)), (slice(0, 1, 1 / (N + 1)))))
+        res2_lin = scipy.optimize.minimize(LSE_lin, [0.5, 0.5], method='CG', options={'eps': eps})
+        res3_lin = scipy.optimize.minimize(LSE_lin, [0.5, 0.5], method='Nelder-Mead')
+
+        plt.plot(x_k, y_k, 'o')
+        plt.plot(x_k, [linear_approximant(x, alpha, beta) for x in x_k], label='Generating line')
+        plt.plot(x_k, [linear_approximant(x, res1_lin[0], res1_lin[1]) for x in x_k], label='Exhaustive search')
+        plt.plot(x_k, [linear_approximant(x, res2_lin.x[0], res2_lin.x[1]) for x in x_k], label='Gauss')
+        plt.plot(x_k, [linear_approximant(x, res3_lin.x[0], res3_lin.x[1]) for x in x_k], label='Nelder-Mead')
+        plt.title('Linear approximation')
+        plt.legend()
+        plt.savefig('Linear approximation')
+        plt.show()
+
+        res1_rat = scipy.optimize.brute(LSE_rat, ranges=(slice(0, 1, 1 / (N + 1)), (slice(0, 1, 1 / (N + 1)))))
+        res2_rat = scipy.optimize.minimize(LSE_rat, [0.5, 0.5], method='CG', options={'eps': eps})
+        res3_rat = scipy.optimize.minimize(LSE_rat, [0.5, 0.5], method='Nelder-Mead')
+
+        plt.plot(x_k, y_k, 'o')
+        plt.plot(x_k, [linear_approximant(x, alpha, beta) for x in x_k], label='Generating line')
+        plt.plot(x_k, [rational_approximant(x, res1_rat[0], res1_rat[1]) for x in x_k], label='Exhaustive search')
+        plt.plot(x_k, [rational_approximant(x, res2_rat.x[0], res2_rat.x[1]) for x in x_k], label='Gauss')
+        plt.plot(x_k, [rational_approximant(x, res3_rat.x[0], res3_rat.x[1]) for x in x_k], label='Nelder-Mead')
+        plt.title('Rational approximation')
+        plt.legend()
+        plt.savefig('Rational approximation')
+        plt.show()
+
+    N = 1000
+    eps = 0.001
+    noise = np.random.normal(0, 1, N + 1)
+    x_k = np.array([3 * k / N for k in range(N + 1)])
+    y_k = np.array([alpha * x_k[k] + beta + noise[k] for k in range(len(x_k))])
