@@ -1,194 +1,291 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import scipy.optimize
+import pyswarm
+import pandas as pd
+import matplotlib.pyplot as plt
+import warnings
 import random
-from abc import ABCMeta, abstractmethod
+
+warnings.filterwarnings(action='ignore')
+random.seed(0)
+
+Num = 1000
+eps = 0.001
+
+def f(x):
+    return 1 / (np.power(x, 2) - 3 * x + 2)
+
+x_k = np.array([3 * x / Num for x in range(0, Num)])
+y_k = np.array([-100 + np.random.normal() if f(x) < -100 else
+                100 + np.random.normal() if f(x) > 100 else
+                f(x) + np.random.normal() for x in x_k])
 
 
-class Vector(object):
-    def __init__(self, x, y):
-        """ Create a vector, example: v = Vector(1,2) """
-        self.x = x
-        self.y = y
+def rational_approximant(x, a, b, c, d):
+    return (a * x + b) / (np.power(x, 2) + c * x + d)
 
-    def __repr__(self):
-        return "({0}, {1})".format(self.x, self.y)
+def loss_function(x, function=rational_approximant):
+    amount = 0
 
-    def __add__(self, other):
-        x = self.x + other.x
-        y = self.y + other.y
-        return Vector(x, y)
+    for i in range(Num):
+        amount = amount + np.power(function(x_k[i], x[0], x[1], x[2], x[3]) - y_k[i], 2)
 
-    def __sub__(self, other):
-        x = self.x - other.x
-        y = self.y - other.y
-        return Vector(x, y)
+    return amount
+def simulated_annealing(function):
+    return scipy.optimize.basinhopping(
+        function,
+        x0=([0.5, 0.5, 0.5, 0.5]),
+        minimizer_kwargs={'method': 'BFGS'}
+    )
 
-    def __rmul__(self, other):
-        x = self.x * other
-        y = self.y * other
-        return Vector(x, y)
+def differential_evolution(function):
+    return scipy.optimize.differential_evolution(
+        function,
+        bounds=[(-2, 2), (-2, 2), (-2, 2), (-2, 2)],
+        tol=eps
+    )
 
-    def __truediv__(self, other):
-        x = self.x / other
-        y = self.y / other
-        return Vector(x, y)
+def particle_swarm_optimization(function):
+    return pyswarm.pso(
+        function,
+        lb=(-2, -2, -2, -2),
+        ub=(2, 2, 2, 2),
+        maxiter=100,
+        minstep=eps
+    )
 
-    def c(self):
-        return (self.x, self.y)
+def neldermead_search(function):
+    return scipy.optimize.minimize(
+        function,
+        x0=([0.5, 0.5, 0.5, 0.5]),
+        method='Nelder-Mead',
+        tol=eps
+    )
+
+def levenberg_marquardt_algorithm(function, x, y):
+    return scipy.optimize.curve_fit(
+        function,
+        xdata=x,
+        ydata=y,
+        method='lm'
+    )
+
+a_nm, b_nm, c_nm, d_nm = simulated_annealing(loss_function).x
+
+print('Simulated Annealing arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+
+a_nm, b_nm, c_nm, d_nm = differential_evolution(loss_function).x
+
+print('Differential Evolution arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+
+a_nm, b_nm, c_nm, d_nm = particle_swarm_optimization(loss_function)[0]
+
+print('Particle Swarm Optimization arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+
+a_nm, b_nm, c_nm, d_nm = neldermead_search(loss_function).x
+
+print('Nelder-Mead Search arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+
+a_lm, b_lm, c_lm, d_lm = levenberg_marquardt_algorithm(rational_approximant, x_k, y_k)[0]
+
+print('Levenberg-Marquardt Algorithm arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_lm, b_lm, c_lm, d_lm))
+
+def lab4_plot(Num, x_k, y_k):
+    plt.figure(figsize=(20, 10))
+    plt.plot(x_k, y_k, '+', label='Data')
+
+    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+    plt.plot(x_k, y, label='Simulated Annealing')
+
+    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+    plt.plot(x_k, y, label='Differential Evolution')
+
+    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+    plt.plot(x_k, y, label='Particle Swarm Optimization')
+
+    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+    plt.plot(x_k, y, label='Nelder-Mead Search')
+
+    y = [rational_approximant(x, a_lm, b_lm, c_lm, d_lm) for x in x_k]
+    plt.plot(x_k, y, label='Levenberg-Marquardt Algorithm')
+
+    ax = plt.gca()
+    ax.axhline(y=0, color='k')
+    ax.axvline(x=0, color='k')
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+    ax.set_title('Minimization of Rational Approximating Function')
+    ax.legend()
+    plt.show()
+
+df = pd.read_csv('data.csv')
+
+def read_coordinates(df):
+    coordinates = []
+    for index in range(len(df)):
+        coordinate = [df.loc[index, 'x'], df.loc[index, 'y']]
+        coordinates.append(coordinate)
+    return coordinates
 
 
-# objective function
-def f(point):
-    x, y = point
-    return x ** 2 + x * y + y ** 2 - 6 * x - 9 * y
-def nelder_mead(alpha=1, beta=0.5, gamma=2, maxiter=10):
-    # initialization
-    v1 = Vector(0, 0)
-    v2 = Vector(1.0, 0)
-    v3 = Vector(0, 1)
+def plot(path, points, df, title):
+    plt.figure(figsize=(20, 10))
+    ax = plt.gca()
 
-    for i in range(maxiter):
-        adict = {v1: f(v1.c()), v2: f(v2.c()), v3: f(v3.c())}
-        points = sorted(adict.items(), key=lambda x: x[1])
+    x = []
+    y = []
+    for index, data in enumerate(path[0]):
+        x.append(points[data][0])
+        y.append(points[data][1])
 
-        b = points[0][0]
-        g = points[1][0]
-        w = points[2][0]
+    for index in range(len(df)):
+        ax.text(df.loc[index, 'x'] + 10, df.loc[index, 'y'] + 10, str(df.loc[index, 'name']), size=10)
 
-        mid = (g + b) / 2
+    ax.scatter(x, y, s=50, c='black')
+    plt.text((x[-1] + x[0]) / 2, (y[-1] + y[0]) / 2, str(1), size=10)
+    plt.arrow(x[-1], y[-1], (x[0] - x[-1]), (y[0] - y[-1]),
+              head_width=50, color='r', length_includes_head=True)
 
-        # reflection
-        xr = mid + alpha * (mid - w)
-        if f(xr.c()) < f(g.c()):
-            w = xr
+    for i in range(0, len(x) - 1):
+        plt.arrow(x[i], y[i], (x[i + 1] - x[i]), (y[i + 1] - y[i]),
+                  head_width=50, color='r', length_includes_head=True)
+        plt.text((x[i] + x[i + 1]) / 2, (y[i] + y[i + 1]) / 2, str(i + 2), size=10)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    ax.set_title(title)
+
+    plt.grid()
+    plt.show()
+
+
+def read_coordinates(df):
+    coordinates = []
+    for index in range(len(df)):
+        coordinate = [df.loc[index, 'x'], df.loc[index, 'y']]
+        coordinates.append(coordinate)
+    return coordinates
+
+
+def plot(path, points, df, title):
+    plt.figure(figsize=(20, 10))
+    ax = plt.gca()
+
+    x = []
+    y = []
+    for index, data in enumerate(path[0]):
+        x.append(points[data][0])
+        y.append(points[data][1])
+
+    for index in range(len(df)):
+        ax.text(df.loc[index, 'x'] + 10, df.loc[index, 'y'] + 10, str(df.loc[index, 'name']), size=10)
+
+    ax.scatter(x, y, s=50, c='black')
+    plt.text((x[-1] + x[0]) / 2, (y[-1] + y[0]) / 2, str(1), size=10)
+    plt.arrow(x[-1], y[-1], (x[0] - x[-1]), (y[0] - y[-1]),
+              head_width=50, color='r', length_includes_head=True)
+
+    for i in range(0, len(x) - 1):
+        plt.arrow(x[i], y[i], (x[i + 1] - x[i]), (y[i + 1] - y[i]),
+                  head_width=50, color='r', length_includes_head=True)
+        plt.text((x[i] + x[i + 1]) / 2, (y[i] + y[i + 1]) / 2, str(i + 2), size=10)
+
+    ax.spines['top'].set_visible(False)
+    ax.spines['bottom'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    ax.spines['left'].set_visible(False)
+
+    ax.set_title(title)
+
+    plt.grid()
+    plt.show()
+
+
+class Annealing(object):
+    def __init__(self, coordinates, T=-1, alpha=-1, stopping_T=-1, stopping_iter=-1, path=df):
+        self.coordinates = coordinates
+        self.N = len(coordinates)
+        self.T = np.sqrt(self.N) if T == -1 else T
+        self.T_save = self.T
+        self.alpha = 0.995 if alpha == -1 else alpha
+        self.stopping_temperature = 1e-6 if stopping_T == -1 else stopping_T
+        self.stopping_iter = 1000000 if stopping_iter == -1 else stopping_iter
+        self.iteration = 1
+        self.path = path
+
+        self.nodes = [i for i in range(self.N)]
+
+        self.best_solution = None
+        self.best_fitness = float('Inf')
+        self.fitness_list = []
+
+    def initial_solution(self):
+        cur_node = random.choice(self.nodes)
+        solution = [cur_node]
+
+        free_nodes = set(self.nodes)
+        free_nodes.remove(cur_node)
+        while free_nodes:
+            next_node = min(free_nodes, key=lambda x: self.dist(cur_node, x))
+            free_nodes.remove(next_node)
+            solution.append(next_node)
+            cur_node = next_node
+
+        cur_fit = self.fitness(solution)
+        if cur_fit < self.best_fitness:
+            self.best_fitness = cur_fit
+            self.best_solution = solution
+        self.fitness_list.append(cur_fit)
+        return solution, cur_fit
+
+    def dist(self, node_0, node_1):
+        coord_0, coord_1 = self.coordinates[node_0], self.coordinates[node_1]
+        return np.sqrt((coord_0[0] - coord_1[0]) ** 2 + (coord_0[1] - coord_1[1]) ** 2)
+
+    def fitness(self, solution):
+        cur_fit = 0
+        for i in range(self.N):
+            cur_fit = cur_fit + self.dist(solution[i % self.N], solution[(i + 1) % self.N])
+        return cur_fit
+
+    def p_accept(self, candidate_fitness):
+        return np.exp(-abs(candidate_fitness - self.cur_fitness) / self.T)
+
+    def accept(self, candidate):
+        candidate_fitness = self.fitness(candidate)
+
+        if candidate_fitness < self.cur_fitness:
+            self.cur_fitness, self.cur_solution = candidate_fitness, candidate
+            if candidate_fitness < self.best_fitness:
+                self.best_fitness, self.best_solution = candidate_fitness, candidate
         else:
-            if f(xr.c()) < f(w.c()):
-                w = xr
-            c = (w + mid) / 2
-            if f(c.c()) < f(w.c()):
-                w = c
-        if f(xr.c()) < f(b.c()):
+            if random.random() < self.p_accept(candidate_fitness):
+                self.cur_fitness, self.cur_solution = candidate_fitness, candidate
 
-            # expansion
-            xe = mid + gamma * (xr - mid)
-            if f(xe.c()) < f(xr.c()):
-                w = xe
-            else:
-                w = xr
-        if f(xr.c()) > f(g.c()):
+    def anneal(self):
+        self.cur_solution, self.cur_fitness = self.initial_solution()
 
-            # contraction
-            xc = mid + beta * (w - mid)
-            if f(xc.c()) < f(w.c()):
-                w = xc
+        print('Initialized solution:', self.best_fitness)
+        plot([self.cur_solution], self.coordinates, self.path, 'Initialized Solution')
 
-        # update points
-        v1 = w
-        v2 = g
-        v3 = b
-    return b
+        while self.T >= self.stopping_temperature and self.iteration < self.stopping_iter:
+            candidate = list(self.cur_solution)
+            l = random.randint(2, self.N - 1)
+            i = random.randint(0, self.N - l)
+            candidate[i: (i + l)] = reversed(candidate[i: (i + l)])
+            self.accept(candidate)
+            self.T = self.T * self.alpha
+            self.iteration = self.iteration + 1
 
-class Optimizer:
-    def __init__(self, function, initialPoint, gradient=None, jacobi=None, hesse=None,
-                 interval=None, epsilon=1e-7, function_array=None, metaclass=ABCMeta):
-        self.function_array = function_array
-        self.epsilon = epsilon
-        self.interval = interval
-        self.function = function
-        self.gradient = gradient
-        self.hesse = hesse
-        self.jacobi = jacobi
-        self.name = self.__class__.__name__.replace('Optimizer', '')
-        self.x = initialPoint
-        self.y = self.function(initialPoint)
+            self.fitness_list.append(self.cur_fitness)
 
-    "This method will return the next point in the optimization process"
-    @abstractmethod
-    def next_point(self):
-        pass
-
-    """
-    Moving to the next point.
-    Saves in Optimizer class next coordinates
-    """
-
-    def move_next(self, nextX):
-        nextY = self.function(nextX)
-        self.y = nextY
-        self.x = nextX
-        return self.x, self.y
-
-class LevenbergMarquardtOptimizer(Optimizer):
-    def __init__(self, function, initialPoint, gradient=None, jacobi=None, hessian=None,
-                 interval=None, function_array=None, learningRate=1):
-        self.learningRate = learningRate
-        functionNew = lambda x: np.array([function(x)])
-        super().__init__(functionNew, initialPoint, gradient, jacobi, hessian, interval, function_array=function_array)
-        self.v = 2
-        self.alpha = 1e-3
-        self.m = self.alpha * np.max(self.getA(jacobi(initialPoint)))
-
-    def getA(self, jacobi):
-       return np.dot(jacobi.T, jacobi)
-
-    def getF(self, d):
-       function = self.function_array(d)
-       return 0.5 * np.dot(function.T, function)
-
-    def next_point(self):
-        if self.y==0: # finished. Y can't be less than zero
-            return self.x, self.y
-        jacobi = self.jacobi(self.x)
-        A = self.getA(jacobi)
-        g = np.dot(jacobi.T, self.function_array(self.x)).reshape((-1, 1))
-        leftPartInverse = np.linalg.inv(A + self.m * np.eye(A.shape[0], A.shape[1]))
-        d_lm = - np.dot(leftPartInverse, g) # moving direction
-        x_new = self.x + self.learningRate * d_lm.reshape((-1)) # line search
-        grain_numerator = (self.getF(self.x) - self.getF(x_new))
-        gain_divisor = 0.5* np.dot(d_lm.T, self.m*d_lm-g) + 1e-10
-        gain = grain_numerator / gain_divisor
-        if gain > 0: # it's a good function approximation.
-            self.move_next(x_new) # ok, step acceptable
-            self.m = self.m * max(1 / 3, 1 - (2 * gain - 1) ** 3)
-            self.v = 2
-        else:
-            self.m *= self.v
-            self.v *= 2
-
-        return self.x, self.y
-
-    def lab22_plot(N, x_k, y_k):
-        res1_lin = scipy.optimize.brute(LSE_lin, ranges=(slice(0, 1, 1 / (N + 1)), (slice(0, 1, 1 / (N + 1)))))
-        res2_lin = scipy.optimize.minimize(LSE_lin, [0.5, 0.5], method='CG', options={'eps': eps})
-        res3_lin = scipy.optimize.minimize(LSE_lin, [0.5, 0.5], method='Nelder-Mead')
-
-        plt.plot(x_k, y_k, 'o')
-        plt.plot(x_k, [linear_approximant(x, alpha, beta) for x in x_k], label='Generating line')
-        plt.plot(x_k, [linear_approximant(x, res1_lin[0], res1_lin[1]) for x in x_k], label='Exhaustive search')
-        plt.plot(x_k, [linear_approximant(x, res2_lin.x[0], res2_lin.x[1]) for x in x_k], label='Gauss')
-        plt.plot(x_k, [linear_approximant(x, res3_lin.x[0], res3_lin.x[1]) for x in x_k], label='Nelder-Mead')
-        plt.title('Linear approximation')
-        plt.legend()
-        plt.savefig('Linear approximation')
-        plt.show()
-
-        res1_rat = scipy.optimize.brute(LSE_rat, ranges=(slice(0, 1, 1 / (N + 1)), (slice(0, 1, 1 / (N + 1)))))
-        res2_rat = scipy.optimize.minimize(LSE_rat, [0.5, 0.5], method='CG', options={'eps': eps})
-        res3_rat = scipy.optimize.minimize(LSE_rat, [0.5, 0.5], method='Nelder-Mead')
-
-        plt.plot(x_k, y_k, 'o')
-        plt.plot(x_k, [linear_approximant(x, alpha, beta) for x in x_k], label='Generating line')
-        plt.plot(x_k, [rational_approximant(x, res1_rat[0], res1_rat[1]) for x in x_k], label='Exhaustive search')
-        plt.plot(x_k, [rational_approximant(x, res2_rat.x[0], res2_rat.x[1]) for x in x_k], label='Gauss')
-        plt.plot(x_k, [rational_approximant(x, res3_rat.x[0], res3_rat.x[1]) for x in x_k], label='Nelder-Mead')
-        plt.title('Rational approximation')
-        plt.legend()
-        plt.savefig('Rational approximation')
-        plt.show()
-
-    N = 1000
-    eps = 0.001
-    noise = np.random.normal(0, 1, N + 1)
-    x_k = np.array([3 * k / N for k in range(N + 1)])
-    y_k = np.array([alpha * x_k[k] + beta + noise[k] for k in range(len(x_k))])
+        print('Best obtained solution:', self.best_fitness)
+        plot([self.best_solution], self.coordinates, self.path, 'Best Obtained Solution')
+coordinates = read_coordinates(df)
+simulated_annealing = Annealing(coordinates=coordinates, stopping_iter=1000000, path=df)
+simulated_annealing.anneal()
