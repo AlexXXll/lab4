@@ -70,17 +70,17 @@ def levenberg_marquardt_algorithm(function, x, y):
         method='lm'
     )
 
-a_nm, b_nm, c_nm, d_nm = simulated_annealing(loss_function).x
+a_aa, b_aa, c_aa, d_aa = simulated_annealing(loss_function).x
 
-print('Simulated Annealing arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+print('Simulated Annealing arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_aa, b_aa, c_aa, d_aa))
 
-a_nm, b_nm, c_nm, d_nm = differential_evolution(loss_function).x
+a_de, b_de, c_de, d_de = differential_evolution(loss_function).x
 
-print('Differential Evolution arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+print('Differential Evolution arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_de, b_de, c_de, d_de))
 
-a_nm, b_nm, c_nm, d_nm = particle_swarm_optimization(loss_function)[0]
+a_ps, b_ps, c_ps, d_ps = particle_swarm_optimization(loss_function)[0]
 
-print('Particle Swarm Optimization arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_nm, b_nm, c_nm, d_nm))
+print('Particle Swarm Optimization arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_ps, b_ps, c_ps, d_ps))
 
 a_nm, b_nm, c_nm, d_nm = neldermead_search(loss_function).x
 
@@ -95,13 +95,13 @@ print('Levenberg-Marquardt Algorithm arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.
 plt.figure(figsize=(20, 10))
 plt.plot(x_k, y_k, '.', label='Data')
 
-y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+y = [rational_approximant(x, a_aa, b_aa, c_aa, d_aa) for x in x_k]
 plt.plot(x_k, y, label='Simulated Annealing')
 
-y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+y = [rational_approximant(x, a_de, b_de, c_de, d_de) for x in x_k]
 plt.plot(x_k, y, label='Differential Evolution')
 
-y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+y = [rational_approximant(x, a_ps, b_ps, c_ps, d_ps) for x in x_k]
 plt.plot(x_k, y, label='Particle Swarm Optimization')
 
 y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
