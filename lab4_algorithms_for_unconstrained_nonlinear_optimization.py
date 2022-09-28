@@ -90,35 +90,37 @@ a_lm, b_lm, c_lm, d_lm = levenberg_marquardt_algorithm(rational_approximant, x_k
 
 print('Levenberg-Marquardt Algorithm arguments: {:.6f}, {:.6f}, {:.6f}, {:.6f}'.format(a_lm, b_lm, c_lm, d_lm))
 
-def lab4_plot(Num, x_k, y_k):
-    plt.figure(figsize=(20, 10))
-    plt.plot(x_k, y_k, '+', label='Data')
 
-    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
-    plt.plot(x_k, y, label='Simulated Annealing')
 
-    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
-    plt.plot(x_k, y, label='Differential Evolution')
+plt.figure(figsize=(20, 10))
+plt.plot(x_k, y_k, '.', label='Data')
 
-    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
-    plt.plot(x_k, y, label='Particle Swarm Optimization')
+y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+plt.plot(x_k, y, label='Simulated Annealing')
 
-    y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
-    plt.plot(x_k, y, label='Nelder-Mead Search')
+y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+plt.plot(x_k, y, label='Differential Evolution')
 
-    y = [rational_approximant(x, a_lm, b_lm, c_lm, d_lm) for x in x_k]
-    plt.plot(x_k, y, label='Levenberg-Marquardt Algorithm')
+y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+plt.plot(x_k, y, label='Particle Swarm Optimization')
 
-    ax = plt.gca()
-    ax.axhline(y=0, color='k')
-    ax.axvline(x=0, color='k')
-    ax.spines['top'].set_visible(False)
-    ax.spines['bottom'].set_visible(False)
-    ax.spines['right'].set_visible(False)
-    ax.spines['left'].set_visible(False)
-    ax.set_title('Minimization of Rational Approximating Function')
-    ax.legend()
-    plt.show()
+y = [rational_approximant(x, a_nm, b_nm, c_nm, d_nm) for x in x_k]
+plt.plot(x_k, y, label='Nelder-Mead Search')
+
+y = [rational_approximant(x, a_lm, b_lm, c_lm, d_lm) for x in x_k]
+plt.plot(x_k, y, label='Levenberg-Marquardt Algorithm')
+
+ax = plt.gca()
+ax.axhline(y=0, color='k')
+ax.axvline(x=0, color='k')
+ax.spines['top'].set_visible(False)
+ax.spines['bottom'].set_visible(False)
+ax.spines['right'].set_visible(False)
+ax.spines['left'].set_visible(False)
+ax.set_title('Minimization of Rational Approximating Function')
+ax.legend()
+plt.show()
+
 
 df = pd.read_csv('data.csv')
 
@@ -183,16 +185,16 @@ def plot(path, points, df, title):
         y.append(points[data][1])
 
     for index in range(len(df)):
-        ax.text(df.loc[index, 'x'] + 10, df.loc[index, 'y'] + 10, str(df.loc[index, 'name']), size=10)
+        ax.text(df.loc[index, 'x'] + 1, df.loc[index, 'y'] + 1, str(df.loc[index, 'name']), size=10)
 
     ax.scatter(x, y, s=50, c='black')
     plt.text((x[-1] + x[0]) / 2, (y[-1] + y[0]) / 2, str(1), size=10)
     plt.arrow(x[-1], y[-1], (x[0] - x[-1]), (y[0] - y[-1]),
-              head_width=50, color='r', length_includes_head=True)
+              head_width=1, color='r', length_includes_head=True)
 
     for i in range(0, len(x) - 1):
         plt.arrow(x[i], y[i], (x[i + 1] - x[i]), (y[i + 1] - y[i]),
-                  head_width=50, color='r', length_includes_head=True)
+                  head_width=2, color='r', length_includes_head=True)
         plt.text((x[i] + x[i + 1]) / 2, (y[i] + y[i + 1]) / 2, str(i + 2), size=10)
 
     ax.spines['top'].set_visible(False)
@@ -286,6 +288,7 @@ class Annealing(object):
 
         print('Best obtained solution:', self.best_fitness)
         plot([self.best_solution], self.coordinates, self.path, 'Best Obtained Solution')
+
 coordinates = read_coordinates(df)
 simulated_annealing = Annealing(coordinates=coordinates, stopping_iter=1000000, path=df)
 simulated_annealing.anneal()
